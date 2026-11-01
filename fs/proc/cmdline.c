@@ -3,10 +3,22 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 
+#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
+#include <linux/jump_label.h>
+extern struct static_key_false susfs_is_fake_cmdline_or_bootconfig_buffer_set;
+extern void susfs_spoof_cmdline_or_bootconfig(struct seq_file *m);
+#endif
+
 static int cmdline_proc_show(struct seq_file *m, void *v)
 {
-	seq_printf(m, "%s\n", saved_command_line);
-	return 0;
+#ifdef CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG
+        if (static_branch_likely(&susfs_is_fake_cmdline_or_bootconfig_buffer_set)) {
+            susfs_spoof_cmdline_or_bootconfig(m);
+            return 0;
+        }
+#endif
+    seq_printf(m, "%s\n", saved_command_line);
+    return 0;
 }
 
 static int cmdline_proc_open(struct inode *inode, struct file *file)
